@@ -1,16 +1,6 @@
-//outputDirectory: "dist/client" → dice a Vercel di servire la cartella giusta
-//framework: null → ⭐ disattiva il preset automatico di TanStack/Vercel che genera l'output SSR
-// e crea il conflitto. Questo è il pezzo chiave.
-//rewrites → fa sì che ogni URL (es. /savings, /capacity) punti a index.html, necessario 
-//per il routing client-side della tua SPA. Senza questo, le sottopagine 
-//darebbero 404 anche se la home funzionasse.
-
-
 {
-    "buildCommand": "npm run build",
-    "outputDirectory": "dist/client",
-    "framework": null,
-    "rewrites": [
-      { "source": "/(.*)", "destination": "/index.html" }
-    ]
-  }
+  "outputDirectory": "dist/client",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
