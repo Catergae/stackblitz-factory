@@ -1,3 +1,5 @@
+import { next } from "@vercel/edge";
+
 export const config = {
   matcher: "/(.*)",
 };
@@ -11,7 +13,7 @@ export default function middleware(request: Request) {
     const authValue = basicAuth.split(" ")[1] ?? "";
     const [user, pwd] = atob(authValue).split(":");
     if (user === USER && pwd === PASS) {
-      return; // accesso consentito → prosegue normalmente
+      return next(); // ← lascia passare correttamente
     }
   }
 
