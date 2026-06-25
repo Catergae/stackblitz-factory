@@ -13,7 +13,10 @@ export default function middleware(request: Request) {
     const authValue = basicAuth.split(" ")[1] ?? "";
     const [user, pwd] = atob(authValue).split(":");
     if (user === USER && pwd === PASS) {
-      return next(); // ← lascia passare correttamente
+      return new Response("LOGIN OK! Auth riuscita.", {
+        status: 200,
+        headers: { "content-type": "text/plain" },
+      });
     }
   }
 
