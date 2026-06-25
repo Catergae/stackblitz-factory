@@ -1,18 +1,28 @@
 import { next } from "@vercel/edge";
 
 export const config = {
-  // Applica il middleware a tutte le rotte, escludendo favicon o asset di sistema
   matcher: "/((?!favicon.ico|_next).*)",
 };
 
 export default async function middleware(request: Request) {
   const url = new URL(request.url);
-  // Utilizziamo SITE_PASSWORD come configurato su Vercel
   const correctPassword = process.env.SITE_PASSWORD;
 
-  // Se la variabile d'ambiente non è definita, lascia passare per evitare blocchi
   if (!correctPassword) {
     return next();
+  }
+
+  // --- NUOVO: Gestione del LOGOUT manuale ---
+  // Se l'utente visita /_logout, cancelliamo il cookie e lo rimandiamo alla home (che chiederà la password)
+  if (url.pathname === "/_logout") {
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: "/",
+        // Impostando Max-Age=0 il cookie viene eliminato all'istante
+        "Set-Cookie": `site-auth=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`,
+      },
+    });
   }
 
   // 1. Controlla se è presente il cookie di autorizzazione
@@ -30,20 +40,21 @@ export default async function middleware(request: Request) {
       const enteredPassword = formData.get("password");
 
       if (enteredPassword === correctPassword) {
-        // Password corretta: imposta il cookie (valido 30 giorni) e reindirizza alla home
+        // Password corretta: reindirizza alla home
         return new Response(null, {
           status: 302,
           headers: {
             Location: "/",
-            "Set-Cookie": `site-auth=${encodeURIComponent(correctPassword)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`,
+            // MODIFICATO: rimosso "Max-Age". Ora è un Cookie di Sessione.
+            // Si cancella automaticamente quando si chiude il browser.
+            "Set-Cookie": `site-auth=${encodeURIComponent(correctPassword)}; Path=/; HttpOnly; SameSite=Lax`,
           },
         });
       }
     } catch (e) {
-      // Errore nel parsing dei dati del form
+      // Errore nel parsing
     }
 
-    // Se la password è errata, rimanda alla schermata con un parametro di errore
     return new Response(null, {
       status: 302,
       headers: {
