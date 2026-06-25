@@ -10,19 +10,18 @@ const NAV = [
   { to: "/masterplan-supc", label: "MP SUPC" },
   { to: "/masterplan-consolidato", label: "MP Consolidato" },
   { to: "/monitoraggio", label: "Monitoraggio" },
-  { to: "/attivita", label: "Planning Attività" },
+  { to: "/attivita", label: "Attività in corso" },
   { to: "/capacity", label: "Capacity Buyer" },
   { to: "/savings", label: "Savings & Performance" },
-  { to: "/post-freeze", label: "Post Freeze" },
+  { to: "/post-freeze", label: "Tracciamento modifiche post-freeze" },
   { to: "/tempistiche", label: "Settings" },
 ] as const;
 
 const PROCESS: { key: string; label: string; routes: string[] }[] = [
-  { key: "demand", label: "1. Demand Collection", routes: ["/contratti-attivi", "/rinnovo-scadenze", "/nuovi-fabbisogni"] },
-  { key: "plan", label: "2. Master Plan", routes: ["/masterplan-ru", "/masterplan-supc", "/masterplan-consolidato"] },
-  { key: "exec", label: "3. Procurement Execution", routes: ["/attivita", "/capacity"] },
-  { key: "freeze", label: "4. Freeze & Approval", routes: ["/post-freeze", "/monitoraggio"] },
-  { key: "perf", label: "5. Savings & Performance", routes: ["/savings"] },
+  { key: "demand", label: "Definizione Fabbisogno", routes: ["/contratti-attivi", "/rinnovo-scadenze", "/nuovi-fabbisogni"] },
+  { key: "plan", label: "Masterplan", routes: ["/masterplan-ru", "/masterplan-supc", "/masterplan-consolidato"] },
+  { key: "exec", label: "Controllo Sourcing", routes: ["/attivita", "/capacity", "/monitoraggio"] },
+  { key: "contracts", label: "Tracciamento modifiche post-freeze", routes: ["/post-freeze", "/savings"] },
 ];
 
 export function AppShell({
@@ -30,12 +29,14 @@ export function AppShell({
   breadcrumb,
   actions,
   filters,
+  legend = false,
   children,
 }: {
   title: string;
   breadcrumb: string[];
   actions?: ReactNode;
   filters?: ReactNode;
+  legend?: boolean;
   children: ReactNode;
 }) {
   const loc = useLocation();
@@ -105,7 +106,7 @@ export function AppShell({
                   <span className={`w-4 h-4 rounded-full grid place-items-center text-[9px] font-bold ${
                     active ? "bg-[var(--primary)] text-white" : "bg-white/15"
                   }`}>{i + 1}</span>
-                  <span>{p.label.replace(/^\d+\.\s/, "")}</span>
+                  <span>{p.label}</span>
                 </div>
                 {i < PROCESS.length - 1 && <span className="text-white/30">›</span>}
               </div>
@@ -151,11 +152,22 @@ export function AppShell({
         <main className="flex-1 min-w-0 overflow-auto p-3">{children}</main>
       </div>
 
+      {/* CELL LEGEND (bottom-left, where applicable) */}
+      {legend && (
+        <div className="legend-bar">
+          <span className="font-semibold text-[var(--foreground)] uppercase tracking-wide text-[10px]">Legenda celle</span>
+          <span><span className="swatch" style={{ background: "var(--cell-readonly)" }} />Read-only</span>
+          <span><span className="swatch" style={{ background: "var(--cell-edit)" }} />Editabile · data entry</span>
+          <span><span className="swatch" style={{ background: "var(--cell-suggest)" }} />Suggerimento · modificabile</span>
+          <span><span className="swatch" style={{ background: "var(--cell-drill)" }} />Drill-down · dettaglio</span>
+        </div>
+      )}
+
       {/* FOOTER */}
       <footer className="bg-white border-t px-3 h-7 flex items-center text-[11px] text-[var(--muted-foreground)] gap-4">
         <span className="flex items-center gap-1.5"><span className="dot dot-green" /> Saved · 09:42:18</span>
         <span>Last edit: M. Rossi</span>
-        <span>Audit ID: PRC-26-{Math.floor(Math.random()*9000+1000)}</span>
+        <span>Audit ID: PRC-26-4827</span>
         <span className="ml-auto">Board EPM Platform · v14.3 · © Acme Group</span>
       </footer>
     </div>

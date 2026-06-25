@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { AppShell, Filter, Select, MultiChip } from "@/components/AppShell";
+import { MessageCircle } from "lucide-react";
+import { AppShell, Filter, Select } from "@/components/AppShell";
 import { Panel, Kpi, StatusPill, Modal, MiniBars } from "@/components/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CONTRACTS, fmtEur, fmt } from "@/lib/seed";
 
 export const Route = createFileRoute("/contratti-attivi")({
@@ -9,13 +11,64 @@ export const Route = createFileRoute("/contratti-attivi")({
   component: Page,
 });
 
+const COMMENT_EXAMPLES: Record<string, string> = {
+  CTR001: "Fornitore in fase di rinegoziazione: attesa proposta entro 15/07.",
+  CTR002: "Volumi in crescita +12% YoY, valutare estensione scope.",
+  CTR003: "Performance SLA sotto target Q1, richiedere piano di rientro.",
+  CTR004: "Contratto strategico, allineamento con CFO già schedulato.",
+  CTR005: "Possibile consolidamento con CTR012 stesso vendor.",
+};
+
+// Orizzonte: Lug 2026 → Dic 2027 (18 mesi)
+const HORIZON_MONTHS = [
+  "Lug 26","Ago 26","Set 26","Ott 26","Nov 26","Dic 26",
+  "Gen 27","Feb 27","Mar 27","Apr 27","Mag 27","Giu 27",
+  "Lug 27","Ago 27","Set 27","Ott 27","Nov 27","Dic 27",
+];
+
+function CommentCell({ id }: { id: string }) {
+  const [val, setVal] = useState(COMMENT_EXAMPLES[id] ?? "");
+  const has = val.trim().length > 0;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          aria-label="Commento contratto"
+          className={`inline-flex items-center justify-center w-6 h-6 rounded hover:bg-[var(--accent-soft)] transition-colors ${
+            has ? "text-[var(--accent)]" : "text-[var(--muted-foreground)]"
+          }`}
+        >
+          <MessageCircle size={15} strokeWidth={has ? 2.4 : 1.8} fill={has ? "var(--accent-soft)" : "none"} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 p-3">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)] mb-1.5">
+          Commento · {id}
+        </div>
+        <textarea
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          rows={4}
+          placeholder="Aggiungi un commento al contratto..."
+          className="w-full text-[12px] border border-[var(--border-strong)] rounded p-2 outline-none focus:border-[var(--accent)] resize-none"
+        />
+        <div className="text-[10px] text-[var(--muted-foreground)] mt-1.5 mb-2">
+          Esempi: rinegoziazione in corso · attesa offerta vendor · piano di rientro SLA · estensione scope.
+        </div>
+        <div className="flex justify-end gap-1.5">
+          <button className="btn btn-ghost text-[11px]">Annulla</button>
+          <button className="btn btn-primary text-[11px]">Salva</button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function Page() {
   const [sel, setSel] = useState<string | null>(null);
   const selected = CONTRACTS.find((c) => c.id === sel);
-  const expiring90 = CONTRACTS.filter((c) => c.daysToEnd < 180).length;
-  const monthly = Array.from({ length: 12 }, (_, m) =>
-    CONTRACTS.filter((c) => parseInt(c.end.slice(5, 7)) === m + 1).length
-  );
+  const expiring180 = CONTRACTS.filter((c) => c.daysToEnd < 180).length;
+  const monthly = HORIZON_MONTHS.map((_, i) => 2 + Math.round(Math.abs(Math.sin((i + 1) * 0.7)) * 8));
 
   return (
     <AppShell
@@ -25,40 +78,39 @@ function Page() {
         <>
           <button className="btn btn-ghost">↻ Refresh</button>
           <button className="btn btn-ghost">⤓ Export</button>
-          <button className="btn btn-primary">→ Crea Rinnovo Massivo</button>
         </>
       }
       filters={
         <>
-          <Filter label="Società"><MultiChip items={["ABC", "DEF"]} /></Filter>
+          <Filter label="Società"><Select value="Tutte" options={["Tutte", "ABC", "DEF", "GHI"]} /></Filter>
           <Filter label="Divisione"><Select value="Tutte" options={["Tutte", ...new Set(CONTRACTS.map(c => c.division))]} /></Filter>
           <Filter label="Owner Contratto"><Select value="Tutti" options={["Tutti", "Mario Rossi", "Giulia Verdi", "Luca Bianchi"]} /></Filter>
           <Filter label="Fornitore"><Select value="Tutti" options={["Tutti", "Vendor 1", "Vendor 2", "Vendor 3"]} /></Filter>
-          <Filter label="Mese Inizio (da)"><Select value="01/2024" options={["01/2024", "06/2024", "01/2025"]} /></Filter>
-          <Filter label="Mese Fine (a)"><Select value="12/2027" options={["12/2026", "12/2027", "12/2028"]} /></Filter>
+          <Filter label="Mese Inizio (da)"><Select value="07/2026" options={["07/2026", "10/2026", "01/2027"]} /></Filter>
+          <Filter label="Mese Fine (a)"><Select value="12/2027" options={["12/2026", "06/2027", "12/2027"]} /></Filter>
           <Filter label="Soglia importo (€)">
             <input type="number" defaultValue={10000} className="w-full text-[12px] border rounded px-2 py-1" />
           </Filter>
           <Filter label="Stato Rinnovo"><Select value="Tutti" options={["Tutti", "Da Rinnovare", "Non Rinnovare", "Pending"]} /></Filter>
-          <button className="btn btn-primary w-full justify-center">Applica filtri</button>
         </>
       }
+      legend
     >
       <div className="grid grid-cols-4 gap-2 mb-3">
         <Kpi label="Contratti attivi" value={String(CONTRACTS.length)} hint="Totali nel perimetro" />
-        <Kpi label="In scadenza < 180gg" value={String(expiring90)} delta={`+${Math.round(expiring90/2)} vs Q-1`} trend="up" />
+        <Kpi label="In scadenza < 180 gg" value={String(expiring180)} delta={`+${Math.round(expiring180/2)} vs Q-1`} trend="up" />
         <Kpi label="Valore in scadenza" value={fmtEur(CONTRACTS.reduce((s,c)=>s+c.value,0))} hint="Spesa annualizzata" />
         <Kpi label="Valore residuo" value={fmtEur(CONTRACTS.reduce((s,c)=>s+c.residual,0))} delta="-12%" trend="down" />
       </div>
 
       <div className="grid grid-cols-3 gap-3 mb-3">
-        <Panel title="Scadenze per mese (12M)" className="col-span-2">
-          <div className="p-3 flex items-end gap-2 h-32">
+        <Panel title="Scadenze per mese (Lug 26 → Dic 27 · 18M)" className="col-span-2">
+          <div className="p-3 flex items-end gap-1.5 h-32">
             {monthly.map((v, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-1">
                 <div className="text-[10px] text-[var(--muted-foreground)]">{v}</div>
                 <div className="w-full bg-[var(--primary)] opacity-90 rounded-sm" style={{ height: `${(v / Math.max(...monthly)) * 90}%`, minHeight: 4 }} />
-                <div className="text-[10px] text-[var(--muted-foreground)]">{["G","F","M","A","M","G","L","A","S","O","N","D"][i]}</div>
+                <div className="text-[9px] text-[var(--muted-foreground)] whitespace-nowrap">{HORIZON_MONTHS[i]}</div>
               </div>
             ))}
           </div>
@@ -88,12 +140,11 @@ function Page() {
           <button className="btn btn-ghost text-[11px]">⬇ Ordina</button>
         </>
       }>
-        <div className="max-h-[480px] overflow-auto">
+        <div className="overflow-auto max-h-[calc(100vh-260px)]">
           <table className="btable">
             <thead>
               <tr>
-                <th className="frozen h" style={{minWidth:32}}><input type="checkbox" /></th>
-                <th className="frozen h" style={{left:32}}>Nr Contratto</th>
+                <th className="frozen h">Nr Contratto</th>
                 <th>Società</th><th>Divisione</th><th>Referente</th>
                 <th>Descrizione</th><th>Fornitore Uscente</th>
                 <th>Inizio</th><th>Fine</th>
@@ -103,14 +154,15 @@ function Page() {
                 <th className="num">gg Scadenza</th>
                 <th>Trend</th>
                 <th>Flag Rinnovo</th>
-                <th>Drill</th>
+                <th>Note</th>
               </tr>
             </thead>
             <tbody>
               {CONTRACTS.map((c) => (
                 <tr key={c.id}>
-                  <td className="frozen"><input type="checkbox" /></td>
-                  <td className="frozen font-semibold" style={{left:32}}>{c.id}</td>
+                  <td className="frozen font-semibold">
+                    <button className="text-[var(--primary)] hover:underline" onClick={() => setSel(c.id)}>{c.id}</button>
+                  </td>
                   <td>{c.company}</td><td>{c.division}</td><td>{c.owner}</td>
                   <td>{c.description}</td><td>{c.vendor}</td>
                   <td>{c.start}</td><td>{c.end}</td>
@@ -118,12 +170,14 @@ function Page() {
                   <td className="num">{fmt(c.residual)}</td>
                   <td className="num">
                     <span className="inline-flex items-center gap-1">
-                      <span className={`dot ${c.consumed > 0.85 ? "dot-red" : c.consumed > 0.6 ? "dot-amber" : "dot-green"}`} />
-                      {(c.consumed*100).toFixed(0)}%
+                      <span className={`dot ${c.consumed >= 0.80 ? "dot-red" : c.consumed >= 0.60 ? "dot-amber" : "dot-green"}`} />
+                      <span className={c.consumed >= 0.80 ? "text-[var(--danger)] font-semibold" : ""}>
+                        {(c.consumed*100).toFixed(0)}%
+                      </span>
                     </span>
                   </td>
                   <td className="num">
-                    <span className={c.daysToEnd < 90 ? "text-[var(--danger)] font-semibold" : c.daysToEnd < 180 ? "text-[var(--warning)]" : ""}>
+                    <span className={c.daysToEnd < 270 ? "text-[var(--danger)] font-semibold" : ""}>
                       {c.daysToEnd}
                     </span>
                   </td>
@@ -131,7 +185,7 @@ function Page() {
                   <td>
                     <StatusPill status={c.renew ? "Approved" : "Pending"} />
                   </td>
-                  <td className="drill" onClick={() => setSel(c.id)}>Dettaglio</td>
+                  <td className="text-center"><CommentCell id={c.id} /></td>
                 </tr>
               ))}
             </tbody>

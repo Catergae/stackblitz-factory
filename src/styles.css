@@ -29,32 +29,38 @@
   --color-cell-suggest: var(--cell-suggest);
   --color-cell-drill: var(--cell-drill);
   --color-cell-readonly: var(--cell-readonly);
+  --color-popover: #ffffff;
+  --color-popover-foreground: var(--foreground);
   --font-sans: "Segoe UI", "Inter", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
 :root {
-  --background: #f3f5f8;
-  --foreground: #1a2533;
+  /* Palette derivata da #6001D1 — interpretazione enterprise sobria.
+     Il viola vivido è usato come accent puntuale; il primary è una versione
+     più profonda e desaturata, leggibile sulle UI dense EPM. */
+  --background: #f5f4f9;
+  --foreground: #1c1830;
   --surface: #ffffff;
-  --surface-2: #f7f9fc;
-  --border: #e2e7ee;
-  --border-strong: #c8d0db;
-  --muted: #eef1f5;
-  --muted-foreground: #5b6878;
-  --primary: #1f4e79;
+  --surface-2: #faf8fd;
+  --border: #e5e2ed;
+  --border-strong: #c9c3d8;
+  --muted: #efedf4;
+  --muted-foreground: #5e5876;
+  --primary: #3d1a78;          /* deep indigo-purple, sober */
   --primary-foreground: #ffffff;
-  --primary-dark: #163a5c;
-  --accent: #0a7d8a;
+  --primary-dark: #260f4f;
+  --accent: #6001D1;           /* vivid signature — usato con parsimonia */
   --accent-foreground: #ffffff;
+  --accent-soft: #ece1f7;      /* tinta tenue per highlight/hover */
   --success: #2e8540;
   --warning: #c97a18;
   --danger: #c0392b;
-  --info: #2563a8;
-  --cell-edit: #fff7d6;       /* YELLOW - editable */
-  --cell-suggest: #fde2dd;    /* RED - prefilled suggestion */
-  --cell-drill: #dbe9f6;      /* BLUE - drill-down available */
-  --cell-readonly: #ffffff;   /* WHITE - read only */
+  --info: #5d3aaa;
+  --cell-edit: #fff7d6;        /* YELLOW - editable */
+  --cell-suggest: #fde2dd;     /* RED - suggerimento prefill */
+  --cell-drill: #e7dcf6;       /* PURPLE soft - drill-down */
+  --cell-readonly: #ffffff;    /* WHITE - read only */
 }
 
 @layer base {
@@ -86,7 +92,7 @@
     color: var(--foreground);
     border-color: var(--border-strong);
   }
-  .btn-ghost:hover { background: var(--muted); }
+  .btn-ghost:hover { background: var(--accent); color: var(--accent-foreground); border-color: var(--accent); }
   .btn-danger {
     background: var(--surface);
     color: var(--danger);
@@ -104,7 +110,7 @@
     border-color: var(--border);
     color: var(--muted-foreground);
   }
-  .chip-active { background: #e6efff; color: var(--primary); border-color: #c0d4ee; }
+  .chip-active { background: var(--accent-soft); color: var(--primary); border-color: #d5c3ee; }
   .panel {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -112,14 +118,14 @@
   }
   .panel-head {
     @apply flex items-center justify-between px-3 py-2 border-b text-[12px] font-semibold;
-    background: linear-gradient(to bottom, #fbfcfd, #f3f5f8);
+    background: linear-gradient(to bottom, #fbfafd, #f1eef7);
     color: var(--foreground);
   }
   /* Board-like data table */
   .btable { width: 100%; font-size: 11.5px; }
   .btable thead th {
-    background: #eef2f7;
-    color: #2a3949;
+    background: #f0edf6;
+    color: #2c2545;
     font-weight: 600;
     text-align: left;
     padding: 6px 8px;
@@ -135,27 +141,35 @@
     background: var(--surface);
     white-space: nowrap;
   }
-  .btable tbody tr:hover td { background: #f5f9ff; }
+  .btable tbody tr:hover td { background: #faf7fe; }
   .btable td.num, .btable th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .btable td.edit  { background: var(--cell-edit); }
   .btable td.suggest { background: var(--cell-suggest); color: #7a2e22; font-weight: 500; }
   .btable td.drill { background: var(--cell-drill); cursor: pointer; color: var(--primary); }
-  .btable td.drill:hover { background: #c8dcef; }
-  .btable td.total, .btable tr.total td { background: #e7ecf2 !important; font-weight: 700; }
-  .btable td.subtotal { background: #f1f4f9; font-weight: 600; }
+  .btable td.drill:hover { background: #d4c1ec; }
+  .btable td.total, .btable tr.total td { background: #ece7f3 !important; font-weight: 700; }
+  .btable td.subtotal { background: #f3eff8; font-weight: 600; }
   .btable .frozen { position: sticky; left: 0; z-index: 1; }
   .btable .frozen.h { z-index: 3; }
 
   .kpi {
+    @apply p-3 flex flex-col gap-0.5;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 6px;
-    @apply p-3 flex flex-col gap-0.5;
   }
   .kpi-label { @apply text-[11px] uppercase tracking-wide; color: var(--muted-foreground); }
   .kpi-value { @apply text-[20px] font-semibold; color: var(--foreground); font-variant-numeric: tabular-nums; }
-  .kpi-delta-up { color: var(--success); font-size: 11px; font-weight: 600; }
-  .kpi-delta-down { color: var(--danger); font-size: 11px; font-weight: 600; }
+  .kpi-delta { color: var(--muted-foreground); font-size: 11px; font-weight: 500; }
+  .kpi-delta-up { color: var(--muted-foreground); font-size: 11px; font-weight: 500; }
+  .kpi-delta-down { color: var(--muted-foreground); font-size: 11px; font-weight: 500; }
+  .legend-bar {
+    @apply flex items-center gap-3 px-3 py-1.5 text-[10.5px];
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    color: var(--muted-foreground);
+  }
+  .legend-bar .swatch { display: inline-block; width: 12px; height: 12px; border: 1px solid var(--border-strong); margin-right: 4px; vertical-align: -2px; }
 
   .dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
   .dot-green { background: var(--success); }

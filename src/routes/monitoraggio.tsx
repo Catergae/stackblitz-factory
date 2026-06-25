@@ -1,118 +1,191 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, Filter, Select } from "@/components/AppShell";
-import { Panel, Kpi, StatusPill } from "@/components/ui";
+import { Panel, Kpi } from "@/components/ui";
 
 export const Route = createFileRoute("/monitoraggio")({
   head: () => ({ meta: [{ title: "Monitoraggio SAL · Procurement Planning" }] }),
   component: Page,
 });
 
-const STEPS = [
-  { k: "Demand", n: 427, color: "var(--info)" },
-  { k: "MP RU Approval", n: 312, color: "var(--primary)" },
-  { k: "SUPC Assignment", n: 268, color: "var(--accent)" },
-  { k: "Strategy Sign-Off", n: 198, color: "var(--warning)" },
-  { k: "Freeze", n: 142, color: "var(--success)" },
-  { k: "Post-Freeze (mod.)", n: 18, color: "var(--danger)" },
+const STATI = [
+  "Freezato",
+  "In attesa di approvazione RdA",
+  "In gestione",
+  "In gara",
+  "In aggiudicazione",
+  "In contrattualizzazione",
+  "Contratto stipulato",
+  "PO rilasciato",
 ];
 
-const BUYERS_SAL = [
-  { name: "Mario Rossi", total: 42, done: 31, late: 4 },
-  { name: "Giulia Verdi", total: 38, done: 22, late: 7 },
-  { name: "Luca Bianchi", total: 51, done: 29, late: 12 },
-  { name: "Sara Neri", total: 27, done: 24, late: 1 },
-  { name: "Paolo Conti", total: 33, done: 18, late: 5 },
+const COMPANIES = ["ABC", "DEF", "GHI"];
+const DIVISIONI = ["Corporate", "Energy", "Retail", "Industrial"];
+const REFERENTI = ["Mario Rossi", "Giulia Verdi", "Luca Bianchi", "Sara Neri", "Paolo Conti"];
+const BUYERS = ["Mario Rossi", "Giulia Verdi", "Luca Bianchi", "Sara Neri"];
+const APPROVATORI = ["CFO", "CPO", "Direttore Acquisti", "Responsabile BU"];
+const DESCRIZIONI = [
+  "Gara energia 2027",
+  "Framework cloud DR",
+  "Rinnovo licenze SAP",
+  "Consulenza M&A advisory",
+  "Audit ESG annuale",
+  "Fornitura HW datacenter",
 ];
+
+function makeId(i: number) {
+  const c = COMPANIES[i % COMPANIES.length];
+  const l1 = String.fromCharCode(65 + (i % 26));
+  const l2 = String.fromCharCode(65 + ((i * 3) % 26));
+  const m = String(5 + (i % 6)).padStart(2, "0");
+  return `2026${m}${c}${l1}${l2}${10 + i}`;
+}
+
+function d(y: number, m: number, day: number) {
+  return new Date(y, m, day).toISOString().slice(0, 10);
+}
+
+const ROWS = Array.from({ length: 18 }, (_, i) => {
+  const baseM = 1 + (i % 8);
+  const dRdAReq = d(2026, baseM, 5 + (i % 20));
+  const nRda = `RDA-${78000 + i * 3}`;
+  const dRdAApprReq = d(2026, baseM, 8 + (i % 20));
+  const dRdAApprEff = d(2026, baseM, 12 + (i % 18));
+  const dGaraPub = d(2026, baseM + 1, 5 + (i % 20));
+  const nGara = `G-${2026000 + i * 7}`;
+  const dAggPrev = d(2026, baseM + 2, 10 + (i % 15));
+  const dAggEff = d(2026, baseM + 2, 14 + (i % 12));
+  const dStipReq = d(2026, baseM + 3, 1 + (i % 25));
+  const nContr = `C-${50000 + i * 5}`;
+  const dStipEff = d(2026, baseM + 3, 6 + (i % 22));
+  const dInizioCtr = d(2026, baseM + 3, 15 + (i % 14));
+  const nPo = `PO-${900000 + i * 11}`;
+  const dPoReq = d(2026, baseM + 4, 1 + (i % 25));
+  const dConsPrev = d(2026, baseM + 5, 10 + (i % 15));
+  const dBolla = d(2026, baseM + 5, 14 + (i % 12));
+  const r = (k: number) => [-2, 0, 0, 1, 3, 5, -1, 0, 7][(i + k) % 9];
+  return {
+    id: makeId(i),
+    desc: DESCRIZIONI[i % DESCRIZIONI.length],
+    societa: COMPANIES[i % COMPANIES.length],
+    divisione: DIVISIONI[i % DIVISIONI.length],
+    referente: REFERENTI[i % REFERENTI.length],
+    buyer: BUYERS[i % BUYERS.length],
+    stato: STATI[i % STATI.length],
+    dRdAReq, nRda, dRitRda: r(0),
+    dRdAApprReq, ultimoAppr: APPROVATORI[i % APPROVATORI.length], dRdAApprEff, dRitApprRda: r(1),
+    dGaraPub, nGara, dRitGara: r(2),
+    dAggPrev, dAggEff, dRitAgg: r(3),
+    dStipReq, nContr, dStipEff, dRitStip: r(4),
+    dInizioCtr, nPo, dPoReq, dRitPo: r(5),
+    dConsPrev, dBolla, dRitCons: r(6),
+  };
+});
+
+function DeltaCell({ v }: { v: number }) {
+  const cls = v > 0 ? "text-[var(--danger)] font-semibold" : v < 0 ? "text-[var(--success)]" : "";
+  return <td className={`num ${cls}`}>{v > 0 ? `+${v}` : v}</td>;
+}
 
 function Page() {
   return (
     <AppShell
       title="Monitoraggio Stato Avanzamento"
-      breadcrumb={["Freeze & Approval","Monitoraggio SAL"]}
-      actions={<><button className="btn btn-ghost">⤓ Export PDF</button><button className="btn btn-primary">📤 Notifica ritardi</button></>}
+      breadcrumb={["Freeze & Approval", "Monitoraggio SAL"]}
       filters={
         <>
-          <Filter label="Periodo"><Select value="YTD" options={["YTD","MTD","Q3 2026"]} /></Filter>
-          <Filter label="Responsabile SUPC"><Select value="Tutti" options={["Tutti","Mario Rossi"]} /></Filter>
-          <Filter label="Categoria"><Select value="Tutte" options={["Tutte","IT","Servizi"]} /></Filter>
-          <Filter label="Stato"><Select value="Tutti" options={["Tutti","In Ritardo","On-Track","Bloccato"]} /></Filter>
+          <Filter label="Periodo"><Select value="YTD" options={["YTD", "MTD", "Q3 2026"]} /></Filter>
+          <Filter label="Responsabile SUPC"><Select value="Tutti" options={["Tutti", ...BUYERS]} /></Filter>
+          <Filter label="Categoria"><Select value="Tutte" options={["Tutte", "IT", "Servizi", "Energy", "Logistica"]} /></Filter>
+          <Filter label="Stato"><Select value="Tutti" options={["Tutti", ...STATI]} /></Filter>
         </>
       }
     >
       <div className="grid grid-cols-5 gap-2 mb-3">
         <Kpi label="Fabbisogni totali" value="427" />
-        <Kpi label="On-Track" value="312" delta="73%" trend="up" />
-        <Kpi label="In Ritardo" value="68" delta="16%" trend="down" />
-        <Kpi label="Bloccati" value="14" hint="richiedono escalation" />
-        <Kpi label="Lead time medio" value="68 gg" delta="-6gg vs Plan" trend="up" />
+        <Kpi label="On-Track" value="312" />
+        <Kpi label="In Ritardo" value="68" />
+        <Kpi label="Bloccati" value="14" />
+        <Kpi label="Lead time medio" value="68 gg" />
       </div>
 
-      <Panel title="Funnel di processo" className="mb-3">
-        <div className="p-3 flex items-end justify-between gap-2">
-          {STEPS.map((s, i) => {
-            const w = 100 - i*10;
-            return (
-              <div key={s.k} className="flex-1 flex flex-col items-center gap-1">
-                <div className="text-[11px] font-semibold tabular-nums">{s.n}</div>
-                <div className="h-20 w-full rounded grid place-items-center text-white text-[12px] font-semibold" style={{ background: s.color, width: `${w}%` }}>
-                  Step {i+1}
-                </div>
-                <div className="text-[11px] text-center">{s.k}</div>
-                <div className="text-[10px] text-[var(--muted-foreground)]">{Math.round(s.n/427*100)}%</div>
-              </div>
-            );
-          })}
-        </div>
-      </Panel>
-
-      <div className="grid grid-cols-2 gap-3">
-        <Panel title="Avanzamento per Buyer">
+      <Panel title="Monitoraggio SAL · vista tabellare">
+        <div className="overflow-auto" style={{ maxHeight: "calc(100vh - 260px)" }}>
           <table className="btable">
-            <thead><tr><th>Buyer</th><th className="num">Totale</th><th className="num">Completati</th><th className="num">In Ritardo</th><th>Avanzamento</th><th>SLA</th></tr></thead>
+            <thead>
+              <tr>
+                <th>ID Fabbisogno</th>
+                <th>Descrizione</th>
+                <th>Società</th>
+                <th>Divisione</th>
+                <th>Referente</th>
+                <th>Buyer</th>
+                <th>Stato Avanz.</th>
+                <th>Data rich. RdA</th>
+                <th>Numero RdA</th>
+                <th className="num">Δ gg Creaz. RdA</th>
+                <th>Data Rich. Appr. RdA</th>
+                <th>Ultimo Appr. RdA</th>
+                <th>Data eff. Appr. RdA</th>
+                <th className="num">Δ gg Appr. RdA</th>
+                <th>Data prev. pubbl. Gara</th>
+                <th>Numero Gara</th>
+                <th className="num">Δ gg Pubbl. Gara</th>
+                <th>Data prev. aggiud.</th>
+                <th>Data eff. aggiud.</th>
+                <th className="num">Δ gg Aggiud.</th>
+                <th>Data rich. stipula</th>
+                <th>Numero Contratto</th>
+                <th>Data eff. stipula</th>
+                <th className="num">Δ gg Stipula</th>
+                <th>Data Inizio Contratto</th>
+                <th>Numero PO</th>
+                <th>Data Rich. PO</th>
+                <th className="num">Δ gg Rilascio PO</th>
+                <th>Data Prev. Consegna</th>
+                <th>Data Bolla</th>
+                <th className="num">Δ gg Consegna</th>
+              </tr>
+            </thead>
             <tbody>
-              {BUYERS_SAL.map(b => {
-                const pct = Math.round(b.done/b.total*100);
-                return (
-                  <tr key={b.name}>
-                    <td className="font-medium">{b.name}</td>
-                    <td className="num">{b.total}</td>
-                    <td className="num">{b.done}</td>
-                    <td className="num"><span className={b.late>5?"text-[var(--danger)] font-semibold":""}>{b.late}</span></td>
-                    <td>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2 bg-[var(--muted)] rounded">
-                          <div className="h-full rounded" style={{width:`${pct}%`,background:pct>70?"var(--success)":pct>50?"var(--warning)":"var(--danger)"}} />
-                        </div>
-                        <span className="w-10 text-right tabular-nums text-[11px]">{pct}%</span>
-                      </div>
-                    </td>
-                    <td><StatusPill status={b.late>6?"Rejected":b.late>3?"Pending":"Approved"} /></td>
-                  </tr>
-                );
-              })}
+              {ROWS.map(r => (
+                <tr key={r.id}>
+                  <td className="font-semibold">{r.id}</td>
+                  <td>{r.desc}</td>
+                  <td>{r.societa}</td>
+                  <td>{r.divisione}</td>
+                  <td>{r.referente}</td>
+                  <td>{r.buyer}</td>
+                  <td><span className="chip">{r.stato}</span></td>
+                  <td>{r.dRdAReq}</td>
+                  <td>{r.nRda}</td>
+                  <DeltaCell v={r.dRitRda} />
+                  <td>{r.dRdAApprReq}</td>
+                  <td>{r.ultimoAppr}</td>
+                  <td>{r.dRdAApprEff}</td>
+                  <DeltaCell v={r.dRitApprRda} />
+                  <td>{r.dGaraPub}</td>
+                  <td>{r.nGara}</td>
+                  <DeltaCell v={r.dRitGara} />
+                  <td>{r.dAggPrev}</td>
+                  <td>{r.dAggEff}</td>
+                  <DeltaCell v={r.dRitAgg} />
+                  <td>{r.dStipReq}</td>
+                  <td>{r.nContr}</td>
+                  <td>{r.dStipEff}</td>
+                  <DeltaCell v={r.dRitStip} />
+                  <td>{r.dInizioCtr}</td>
+                  <td>{r.nPo}</td>
+                  <td>{r.dPoReq}</td>
+                  <DeltaCell v={r.dRitPo} />
+                  <td>{r.dConsPrev}</td>
+                  <td>{r.dBolla}</td>
+                  <DeltaCell v={r.dRitCons} />
+                </tr>
+              ))}
             </tbody>
           </table>
-        </Panel>
-        <Panel title="Alert SAL · escalation">
-          <div className="divide-y text-[12px]">
-            {[
-              ["#MP-0142","Sara Neri","Approvazione SUPC > 14gg",">SLA","danger"],
-              ["#MP-0218","Luca Bianchi","Strategia non firmata",">SLA","danger"],
-              ["#MP-0287","Giulia Verdi","Documenti RDA mancanti","Bloccato","warning"],
-              ["#MP-0301","Mario Rossi","In attesa CFO sign-off","Pending","info"],
-              ["#MP-0344","Paolo Conti","Conflitto BDG 2027","Da rivedere","warning"],
-            ].map((a, i) => (
-              <div key={i} className="flex items-center gap-2 px-3 py-1.5">
-                <span className="font-semibold w-20">{a[0]}</span>
-                <span className="w-24 text-[var(--muted-foreground)]">{a[1]}</span>
-                <span className="flex-1">{a[2]}</span>
-                <span className={`chip ${a[4]==="danger"?"!bg-[#fbe6e2] !text-[var(--danger)]":a[4]==="warning"?"!bg-[#fff3dc] !text-[var(--warning)]":""}`}>{a[3]}</span>
-                <button className="btn btn-ghost text-[10px]">Apri</button>
-              </div>
-            ))}
-          </div>
-        </Panel>
-      </div>
+        </div>
+      </Panel>
     </AppShell>
   );
 }

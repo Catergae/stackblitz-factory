@@ -1,138 +1,117 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, Filter, Select } from "@/components/AppShell";
-import { Panel, Kpi, StatusPill } from "@/components/ui";
+import { Panel, Kpi } from "@/components/ui";
 import { fmt } from "@/lib/seed";
 
 export const Route = createFileRoute("/post-freeze")({
-  head: () => ({ meta: [{ title: "Post Freeze · Procurement Planning" }] }),
+  head: () => ({ meta: [{ title: "Tracciamento modifiche post-freeze · Procurement Planning" }] }),
   component: Page,
 });
 
-const REQS = Array.from({length: 9}, (_, i) => ({
-  id: `PF-${String(1000+i)}`,
-  origMP: `MP-${String(220+i)}`,
-  desc: ["Aumento volumi cloud","Riduzione scope consulenza","Nuovo fornitore audit","Anticipo contratto SAP","Estensione manutenzione DC"][i%5],
-  buyer: ["Mario Rossi","Giulia Verdi","Luca Bianchi"][i%3],
-  delta: (i%2===0?1:-1) * (5000+i*2500),
-  reason: ["Variazione perimetro","Riduzione costi","Cambio scope","Anticipo timing"][i%4],
-  impact: ["Basso","Medio","Alto"][i%3],
-  status: ["Pending","Approved","Pending","Rejected","Pending"][i%5],
-}));
+const COMPANIES = ["ABC", "DEF", "GHI"];
+const REFERENTI = ["A. Conti", "P. Russo", "M. Greco", "L. Marini"];
+const CATEGORIE = ["IT Services", "Consulenza", "Facility", "Logistica", "Legal", "Energy"];
+const DESCRIZIONI = [
+  "Estensione perimetro SAP S/4",
+  "Manutenzione evolutiva HW DC",
+  "Audit ESG e reportistica CSRD",
+  "Tenant cloud Azure produzione",
+  "Programma formazione compliance",
+  "Advisory M&A integrazione",
+  "Rinnovo licenze Microsoft 365",
+];
+
+const ROWS = Array.from({ length: 12 }, (_, i) => {
+  const company = COMPANIES[i % COMPANIES.length];
+  const importoStimato = 40000 + i * 6500;
+  const importoRdA = importoStimato + (i % 2 === 0 ? 1 : -1) * (2500 + i * 800);
+  const baseMonth = 7 + (i % 4);
+  const baseDay = 5 + (i % 18);
+  const dataBoard = `2026-${String(baseMonth).padStart(2, "0")}-${String(baseDay).padStart(2, "0")}`;
+  const deltaDays = (i % 2 === 0 ? 1 : -1) * (3 + (i % 12));
+  const jaggaerDate = new Date(`${dataBoard}T00:00:00Z`);
+  jaggaerDate.setUTCDate(jaggaerDate.getUTCDate() + deltaDays);
+  const dataJag = jaggaerDate.toISOString().slice(0, 10);
+  return {
+    id: `202607${company}N${String(i + 1).padStart(2, "0")}`,
+    descrizione: DESCRIZIONI[i % DESCRIZIONI.length],
+    nrRdA: `RDA-2026-${String(2100 + i)}`,
+    referente: REFERENTI[i % REFERENTI.length],
+    categoria: CATEGORIE[i % CATEGORIE.length],
+    importoStimato,
+    importoRdA,
+    deltaEuro: importoRdA - importoStimato,
+    dataBoard,
+    dataJag,
+    deltaDays,
+  };
+});
 
 function Page() {
+  const totDelta = ROWS.reduce((s, r) => s + r.deltaEuro, 0);
+  const totGiorni = ROWS.reduce((s, r) => s + Math.abs(r.deltaDays), 0);
+  const dateMod = ROWS.filter((r) => r.deltaDays !== 0).length;
+
   return (
     <AppShell
-      title="Post Freeze · gestione modifiche riga MasterPlan"
-      breadcrumb={["Freeze & Approval","Post Freeze"]}
-      actions={
-        <>
-          <button className="btn btn-ghost">📋 Storico modifiche</button>
-          <button className="btn btn-primary">+ Richiesta modifica</button>
-        </>
-      }
+      title="Tracciamento modifiche post-freeze"
+      breadcrumb={["Tracciamento modifiche post-freeze", "Tracking"]}
       filters={
         <>
-          <Filter label="Stato"><Select value="Pending" options={["Pending","Approved","Rejected","Tutti"]} /></Filter>
-          <Filter label="Impatto"><Select value="Tutti" options={["Tutti","Alto","Medio","Basso"]} /></Filter>
-          <Filter label="Buyer"><Select value="Tutti" options={["Tutti","Mario Rossi"]} /></Filter>
-          <div className="p-2 bg-[#fde2dd] border border-[#e8c4be] rounded text-[11px] text-[#7a2e22]">
-            <b>🧊 Plan freezed</b> dal 30/09/2026. Ogni modifica richiede approvazione del Responsabile SUPC e tracciatura audit.
-          </div>
+          <Filter label="Referente"><Select value="Tutti" options={["Tutti", ...REFERENTI]} /></Filter>
+          <Filter label="Categoria"><Select value="Tutte" options={["Tutte", ...CATEGORIE]} /></Filter>
+          <Filter label="ID Fabbisogno"><Select value="Tutti" options={["Tutti", ...ROWS.map((r) => r.id)]} /></Filter>
         </>
       }
+      legend
     >
       <div className="grid grid-cols-4 gap-2 mb-3">
-        <Kpi label="Richieste post-freeze" value={String(REQS.length)} />
-        <Kpi label="Pending approval" value={String(REQS.filter(r=>r.status==="Pending").length)} delta="entro 5gg" trend="down" />
-        <Kpi label="Δ Spesa cumulato" value={`€ ${fmt(REQS.reduce((s,r)=>s+r.delta,0))}`} delta="su Plan freezed" trend="up" />
-        <Kpi label="Impatto Alto" value={String(REQS.filter(r=>r.impact==="Alto").length)} hint="richiede CFO sign-off" />
+        <Kpi label="Fabbisogni modificati" value={String(ROWS.length)} />
+        <Kpi label="Date modificate" value={String(dateMod)} />
+        <Kpi label="Valore totale modifiche" value={`${totDelta >= 0 ? "+" : "-"}€ ${fmt(Math.abs(totDelta))}`} />
+        <Kpi label="Totale giorni modifiche" value={String(totGiorni)} />
       </div>
 
-      <Panel title="Richieste di modifica">
-        <table className="btable">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Riga MP originale</th>
-              <th>Descrizione modifica</th>
-              <th>Buyer</th>
-              <th>Motivazione</th>
-              <th className="num">Δ Spesa (€)</th>
-              <th>Impatto</th>
-              <th>Stato</th>
-              <th>Workflow</th>
-              <th>Azione</th>
-            </tr>
-          </thead>
-          <tbody>
-            {REQS.map(r=>(
-              <tr key={r.id}>
-                <td className="font-semibold">{r.id}</td>
-                <td className="drill">{r.origMP}</td>
-                <td className="edit"><input className="bg-transparent w-full" defaultValue={r.desc} /></td>
-                <td>{r.buyer}</td>
-                <td className="edit">{r.reason}</td>
-                <td className={`num font-semibold ${r.delta>0?"text-[var(--danger)]":"text-[var(--success)]"}`}>{r.delta>0?"+":"-"}€ {fmt(Math.abs(r.delta))}</td>
-                <td>
-                  <span className={`chip ${r.impact==="Alto"?"!bg-[#fbe6e2] !text-[var(--danger)]":r.impact==="Medio"?"!bg-[#fff3dc] !text-[var(--warning)]":""}`}>{r.impact}</span>
-                </td>
-                <td><StatusPill status={r.status} /></td>
-                <td className="text-[10px] text-[var(--muted-foreground)]">SUPC → CFO {r.impact==="Alto"?"→ Board":""}</td>
-                <td>
-                  {r.status==="Pending" ? (
-                    <div className="flex gap-1">
-                      <button className="btn btn-success text-[10px] py-0.5 px-1.5">Approva</button>
-                      <button className="btn btn-danger text-[10px] py-0.5 px-1.5">Respingi</button>
-                    </div>
-                  ) : <span className="text-[var(--muted-foreground)] text-[10px]">—</span>}
-                </td>
+      <Panel title="Modifiche post-freeze">
+        <div className="overflow-auto max-h-[calc(100vh-260px)]">
+          <table className="btable">
+            <thead>
+              <tr>
+                <th>ID Fabbisogno</th>
+                <th>Descrizione Fabbisogno</th>
+                <th>Nr RdA</th>
+                <th>Referente</th>
+                <th className="num">Importo stimato fabbisogno (€)</th>
+                <th className="num">Importo RdA (€)</th>
+                <th className="num">Δ €</th>
+                <th>Data Rich. Inizio Validità – Board</th>
+                <th>Data Rich. Inizio Validità – Jaggaer</th>
+                <th className="num">Δ giorni</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {ROWS.map((r) => (
+                <tr key={r.id}>
+                  <td className="font-semibold">{r.id}</td>
+                  <td>{r.descrizione}</td>
+                  <td>{r.nrRdA}</td>
+                  <td>{r.referente}</td>
+                  <td className="num">{fmt(r.importoStimato)}</td>
+                  <td className="num">{fmt(r.importoRdA)}</td>
+                  <td className={`num font-semibold ${r.deltaEuro > 0 ? "text-[var(--danger)]" : r.deltaEuro < 0 ? "text-[var(--success)]" : ""}`}>
+                    {r.deltaEuro > 0 ? "+" : r.deltaEuro < 0 ? "-" : ""}€ {fmt(Math.abs(r.deltaEuro))}
+                  </td>
+                  <td>{r.dataBoard}</td>
+                  <td>{r.dataJag}</td>
+                  <td className={`num font-semibold ${r.deltaDays > 0 ? "text-[var(--danger)]" : r.deltaDays < 0 ? "text-[var(--success)]" : ""}`}>
+                    {r.deltaDays > 0 ? "+" : ""}{r.deltaDays}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Panel>
-
-      <div className="grid grid-cols-2 gap-3 mt-3">
-        <Panel title="Audit log · ultimi eventi">
-          <div className="divide-y text-[11.5px]">
-            {[
-              ["18/06 09:32","M. Rossi","Approvata PF-1003","Δ +€7.500","Approved"],
-              ["18/06 09:18","S. Neri","Respinta PF-1006","fuori scope","Rejected"],
-              ["17/06 16:48","G. Verdi","Creata PF-1008","richiesta CFO","Pending"],
-              ["17/06 14:02","Sistema","Lock MP-218 dopo freeze","auto","Info"],
-            ].map((r,i)=>(
-              <div key={i} className="flex items-center gap-2 px-3 py-1.5">
-                <span className="w-24 text-[var(--muted-foreground)]">{r[0]}</span>
-                <span className="w-20">{r[1]}</span>
-                <span className="flex-1">{r[2]}</span>
-                <span className="text-[var(--muted-foreground)]">{r[3]}</span>
-                <StatusPill status={r[4]} />
-              </div>
-            ))}
-          </div>
-        </Panel>
-        <Panel title="Impatto su BDG annuale">
-          <div className="p-3 space-y-2 text-[11.5px]">
-            {["BDG 2026","BDG 2027","BDG 2028"].map((y,i)=>{
-              const d = [+12400, -8800, +3200][i];
-              return (
-                <div key={y} className="flex items-center gap-2">
-                  <span className="w-20 font-semibold">{y}</span>
-                  <div className="flex-1 h-3 bg-[var(--muted)] rounded relative">
-                    <div className="absolute top-0 bottom-0" style={{
-                      left: "50%", width: `${Math.abs(d/300)}%`,
-                      background: d>0?"var(--danger)":"var(--success)",
-                      transform: d<0?"translateX(-100%)":""
-                    }} />
-                    <div className="absolute top-0 bottom-0 left-1/2 w-px bg-[var(--border-strong)]" />
-                  </div>
-                  <span className={`w-24 text-right tabular-nums ${d>0?"text-[var(--danger)]":"text-[var(--success)]"}`}>{d>0?"+":""}€ {fmt(d)}</span>
-                </div>
-              );
-            })}
-          </div>
-        </Panel>
-      </div>
     </AppShell>
   );
 }

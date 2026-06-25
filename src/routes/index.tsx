@@ -19,10 +19,10 @@ const TILES = [
   { to: "/masterplan-ru", title: "MasterPlan Requesting Unit", desc: "Vista owner del fabbisogno · drill-down.", group: "Plan", icon: "📋" },
   { to: "/masterplan-supc", title: "MasterPlan SUPC", desc: "Buyer SUPC: lead time, strategia, KPI.", group: "Plan", icon: "🧮" },
   { to: "/masterplan-consolidato", title: "MasterPlan Consolidato", desc: "Vista d'insieme · BLSC · matrice Kraljic.", group: "Plan", icon: "📊" },
-  { to: "/attivita", title: "Planning Attività", desc: "Pipeline attività in corso per Buyer.", group: "Execution", icon: "📌" },
+  { to: "/attivita", title: "Attività in corso", desc: "Pipeline attività in corso per Buyer.", group: "Execution", icon: "📌" },
   { to: "/capacity", title: "Capacity Buyer", desc: "Distribuzione carichi e saturation.", group: "Execution", icon: "👥" },
   { to: "/monitoraggio", title: "Monitoraggio SAL", desc: "Stato avanzamento workflow.", group: "Freeze", icon: "📈" },
-  { to: "/post-freeze", title: "Post Freeze", desc: "Gestione modifiche post-freeze.", group: "Freeze", icon: "🧊" },
+  { to: "/post-freeze", title: "Tracciamento modifiche post-freeze", desc: "Tracciamento modifiche post-freeze.", group: "Freeze", icon: "🧊" },
   { to: "/savings", title: "Savings & Performance", desc: "Performance del Procurement.", group: "Perf", icon: "💰" },
   { to: "/tempistiche", title: "Tempistiche ed Effort", desc: "Settings amministratore: lead time, effort.", group: "Admin", icon: "⚙️" },
 ];
