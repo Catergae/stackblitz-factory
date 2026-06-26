@@ -12,14 +12,12 @@ export default async function middleware(request: Request) {
     return next();
   }
 
-  // --- NUOVO: Gestione del LOGOUT manuale ---
-  // Se l'utente visita /_logout, cancelliamo il cookie e lo rimandiamo alla home (che chiederà la password)
+  // Gestione del LOGOUT manuale
   if (url.pathname === "/_logout") {
     return new Response(null, {
       status: 302,
       headers: {
         Location: "/",
-        // Impostando Max-Age=0 il cookie viene eliminato all'istante
         "Set-Cookie": `site-auth=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`,
       },
     });
@@ -40,19 +38,17 @@ export default async function middleware(request: Request) {
       const enteredPassword = formData.get("password");
 
       if (enteredPassword === correctPassword) {
-        // Password corretta: reindirizza alla home
+        // Password corretta: reindirizza alla home passando "?login=1" nell'URL
         return new Response(null, {
           status: 302,
           headers: {
-            Location: "/",
-            // MODIFICATO: rimosso "Max-Age". Ora è un Cookie di Sessione.
-            // Si cancella automaticamente quando si chiude il browser.
+            Location: "/?login=1", // <-- MODIFICATO QUI
             "Set-Cookie": `site-auth=${encodeURIComponent(correctPassword)}; Path=/; HttpOnly; SameSite=Lax`,
           },
         });
       }
     } catch (e) {
-      // Errore nel parsing
+      // Errore
     }
 
     return new Response(null, {
@@ -63,7 +59,7 @@ export default async function middleware(request: Request) {
     });
   }
 
-  // 3. Mostra la schermata di inserimento password
+  // 3. Schermata login
   const hasError = url.searchParams.has("error");
   
   const loginHtml = `
